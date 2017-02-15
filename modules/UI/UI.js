@@ -325,69 +325,6 @@ function _setTooltipDefaults() {
 }
 
 /**
- * Setup some UI event listeners.
- */
-function registerListeners() {
-
-    UI.addListener(UIEvents.ETHERPAD_CLICKED, function () {
-        if (etherpadManager) {
-            etherpadManager.toggleEtherpad();
-        }
-    });
-
-    UI.addListener(UIEvents.SHARED_VIDEO_CLICKED, function () {
-        if (sharedVideoManager) {
-            sharedVideoManager.toggleSharedVideo();
-        }
-    });
-
-    UI.addListener(UIEvents.TOGGLE_FULLSCREEN, UI.toggleFullScreen);
-
-    UI.addListener(UIEvents.TOGGLE_CHAT, UI.toggleChat);
-
-    UI.addListener(UIEvents.TOGGLE_SETTINGS, function () {
-        UI.toggleSidePanel("settings_container");
-    });
-
-    UI.addListener(UIEvents.TOGGLE_CONTACT_LIST, UI.toggleContactList);
-
-    UI.addListener( UIEvents.TOGGLE_PROFILE, function() {
-        if(APP.tokenData.isGuest)
-            UI.toggleSidePanel("profile_container");
-    });
-
-    UI.addListener(UIEvents.TOGGLE_FILM_STRIP, UI.handleToggleFilmStrip);
-
-    UI.addListener(UIEvents.FOLLOW_ME_ENABLED, function (isEnabled) {
-        if (followMeHandler)
-            followMeHandler.enableFollowMe(isEnabled);
-    });
-}
-
-/**
- * Setup some DOM event listeners.
- */
-function bindEvents() {
-    function onResize() {
-        SideContainerToggler.resize();
-        VideoLayout.resizeVideoArea();
-    }
-
-    // Resize and reposition videos in full screen mode.
-    $(document).on(
-        'webkitfullscreenchange mozfullscreenchange fullscreenchange',
-        () => {
-            eventEmitter.emit(  UIEvents.FULLSCREEN_TOGGLED,
-                                UIUtil.isFullScreen());
-
-            onResize();
-        }
-    );
-
-    $(window).resize(onResize);
-}
-
-/**
  * Returns the shared document manager object.
  * @return {EtherpadManager} the shared document manager object
  */
@@ -410,8 +347,6 @@ UI.start = function () {
     // Set the defaults for tooltips.
     _setTooltipDefaults();
 
-    registerListeners();
-
     ToolbarToggler.init();
     SideContainerToggler.init(eventEmitter);
     FilmStrip.init(eventEmitter);
@@ -422,7 +357,6 @@ UI.start = function () {
     }
     VideoLayout.resizeVideoArea(true, true);
 
-    bindEvents();
     sharedVideoManager = new SharedVideoManager(eventEmitter);
     if (!interfaceConfig.filmStripOnly) {
         let debouncedShowToolbar = debounce(() => {
@@ -479,10 +413,57 @@ UI.start = function () {
     if(APP.tokenData.callee) {
         UI.showRingOverlay();
     }
+};
 
-    // Return true to indicate that the UI has been fully started and
-    // conference ready.
-    return true;
+/**
+ * Setup some UI event listeners.
+ */
+UI.registerListeners = () => {
+    UIListeners.forEach((value, key) => {
+        UI.addListener(key, value);
+    });
+};
+
+/**
+ * Unregister some UI event listeners.
+ */
+UI.unregisterListeners = () => {
+    UIListeners.forEach((value, key) => {
+        UI.removeListener(key, value);
+    });
+};
+
+/**
+ * Setup some DOM event listeners.
+ */
+UI.bindEvents = () => {
+    function onResize() {
+        SideContainerToggler.resize();
+        VideoLayout.resizeVideoArea();
+    }
+
+    // Resize and reposition videos in full screen mode.
+    $(document).on(
+        'webkitfullscreenchange mozfullscreenchange fullscreenchange',
+        () => {
+            eventEmitter.emit(UIEvents.FULLSCREEN_TOGGLED,
+                UIUtil.isFullScreen());
+
+            onResize();
+        }
+    );
+
+    $(window).resize(onResize);
+};
+
+/**
+ * Unbind some DOM event listeners.
+ */
+UI.unbindEvents = () => {
+    $(document)
+        .off('webkitfullscreenchange mozfullscreenchange fullscreenchange');
+
+    $(window).off('resize');
 };
 
 /**
@@ -1424,5 +1405,45 @@ UI.isRingOverlayVisible = function () {
 UI.onUserFeaturesChanged = function (user) {
     VideoLayout.onUserFeaturesChanged(user);
 };
+
+const UIListeners = new Map([
+    [
+        UIEvents.ETHERPAD_CLICKED, () => {
+            if (etherpadManager) {
+                etherpadManager.toggleEtherpad();
+            }
+        }
+    ], [
+        UIEvents.SHARED_VIDEO_CLICKED, () => {
+            if (sharedVideoManager) {
+                sharedVideoManager.toggleSharedVideo();
+            }
+        }
+    ], [
+        UIEvents.TOGGLE_FULLSCREEN,  UI.toggleFullScreen
+    ], [
+        UIEvents.TOGGLE_CHAT, UI.toggleChat
+    ], [
+        UIEvents.TOGGLE_SETTINGS, () => {
+            UI.toggleSidePanel("settings_container");
+        }
+    ], [
+        UIEvents.TOGGLE_CONTACT_LIST, UI.toggleContactList
+    ], [
+        UIEvents.TOGGLE_PROFILE, () => {
+            if(APP.tokenData.isGuest) {
+                UI.toggleSidePanel("profile_container");
+            }
+        }
+    ], [
+        UIEvents.TOGGLE_FILM_STRIP, UI.handleToggleFilmStrip
+    ], [
+        UIEvents.FOLLOW_ME_ENABLED, (isEnabled) => {
+            if (followMeHandler) {
+                followMeHandler.enableFollowMe(isEnabled);
+            }
+        }
+    ]
+]);
 
 module.exports = UI;
