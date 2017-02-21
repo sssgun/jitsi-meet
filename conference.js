@@ -583,25 +583,10 @@ export default {
                         resolve, reject, this.invite)).connect();
                 });
             })
-            .catch((err) => {
-                const {
-                    isOldBrowser,
-                    isPluginRequired,
-                    message,
-                    webRTCReadyPromise
-                } = err;
-                const rejectValue = {
-                    isOldBrowser,
-                    isPluginRequired,
-                    // Browser could require Temasys plugin to be installed
-                    // and conference initialization was rejected but it could
-                    // be reinitialized after installation of the plugin.
-                    webRTCReadyPromise
-                };
+            .catch(reason => {
+                logger.error(reason.message);
 
-                logger.error(message);
-
-                return Promise.reject(rejectValue);
+                return Promise.reject(reason);
             });
     },
     /**
